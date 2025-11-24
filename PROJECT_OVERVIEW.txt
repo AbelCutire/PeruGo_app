@@ -1,0 +1,261 @@
+PROYECTO: PeruGoMobile
+=======================
+
+¿De qué va este proyecto?
+-------------------------
+PeruGoMobile es la app móvil de PeruGo. La idea es que una persona pueda:
+
+- Descubrir destinos turísticos por todo el Perú.
+- Guardar sus favoritos en **Mis planes**.
+- Ver un flujo de **reserva** con desglose de costos.
+- Hablar con un asistente de IA que entiende texto y voz, y que además puede leer en voz alta las respuestas.
+- Cambiar entre **modo claro y oscuro** cuando quiera.
+
+Todo esto está construido con **Expo + React Native**, usando **expo-router** para organizar las pantallas.
+
+Tecnología que hay detrás
+-------------------------
+- **React Native + Expo (SDK 54)** como base del proyecto.
+- **expo-router** para definir las rutas a partir de la carpeta `app/`.
+- **React Navigation** para los tabs inferiores (gestionado por expo-router).
+- **React Context** para manejar estado global:
+  - `AuthContext`: sesión del usuario (login y registro).
+  - `UiThemeContext`: tema claro/oscuro y función `toggleTheme()`.
+  - `ChatContext`: mensajes del chat y llamadas al backend de IA.
+  - `PlanesContext`: los destinos que el usuario guarda en Mis planes.
+- **Audio / voz**:
+  - `expo-av` para grabar audio (STT).
+  - `expo-speech` para leer en voz alta las respuestas del asistente (TTS).
+- **Backend de IA / STT** (no está en este repo, pero es importante):
+  - API Flask en Railway: `https://perugobackend-flask-production.up.railway.app`.
+  - Endpoint `/process` para el chat de texto.
+  - Endpoint `/sts` para reconocimiento de voz.
+
+Cómo está organizado el código
+------------------------------
+Las carpetas clave del proyecto móvil son estas:
+
+- `app/`
+  - `_layout.tsx`: layout base. Aquí se montan los providers de contexto (tema, chat, planes, auth) y se define la navegación principal.
+  - `(tabs)/`
+    - `index.tsx`: pantalla **Inicio**.
+    - `explore.tsx`: pantalla **Explorar destinos**.
+    - `mis-planes.tsx`: pantalla **Mis planes**.
+    - `chat.tsx`: pantalla **Chat con asistente**.
+  - `destino/[id].tsx`: detalle de un destino.
+  - `reserva/[id].tsx`: flujo de **Reserva** de un destino ya guardado.
+  - `login.tsx`: login.
+  - `register.tsx`: registro.
+
+- `components/`
+  - `Header.tsx`: header global que se reutiliza en las pantallas principales.
+    - Muestra el título/branding.
+    - Botón de cambio de tema (sol/luna), conectado a `UiThemeContext`.
+    - Botón de micrófono que graba audio y lo manda al backend de STT.
+    - Acciones relacionadas con login/perfil.
+
+- `src/`
+  - `context/`
+    - `UiThemeContext.tsx`: tema global (`light` / `dark`) + `toggleTheme()`.
+    - `ChatContext.tsx`: estado del chat y comunicación con `/process`.
+    - `PlanesContext.tsx`: destinos guardados por el usuario.
+    - `AuthContext.tsx`: estado de sesión.
+  - `components/`
+    - `DestinoCard.tsx`: tarjeta reusable para mostrar un destino en listas.
+  - `data/`
+    - `destinos.ts`: catálogo local con todos los destinos. Se usa como fallback si la API remota falla.
+
+- `assets/`
+  - `images/`: iconos de Android, icono principal de la app, logo, etc.
+
+Resumen de pantallas y qué hace cada una
+----------------------------------------
+
+1. Inicio – `app/(tabs)/index.tsx`
+----------------------------------
+Es la primera pantalla cuando abres la app.
+
+- Tiene un hero con imagen de Machu Picchu (`ImageBackground`).
+- Muestra el título **"PeruGo"** y el subtítulo **"El Perú te habla"**.
+- Botón central de micrófono:
+  - Pide permisos al micrófono.
+  - Usa `expo-av` para grabar.
+  - Envía el audio al endpoint `/sts` del backend.
+  - Cuando llega la respuesta del STT, rellena el campo de búsqueda con el texto reconocido.
+- Caja de búsqueda:
+  - Permite escribir manualmente o usar el texto que vino de la voz.
+  - Botón de búsqueda con ícono `Feather search`.
+  - Al buscar, se envía el texto a `ChatContext` como mensaje del usuario y se navega al tab **Chat**.
+- Toda la pantalla adapta colores según el tema (claro/oscuro) usando `UiThemeContext`.
+
+2. Explorar – `app/(tabs)/explore.tsx`
+--------------------------------------
+- Lista todos los destinos, usando la API remota o el fallback local `src/data/destinos.ts`.
+- Permite buscar/filtrar.
+- Usa `DestinoCard` para mostrar cada destino con imagen, título, etc.
+- Al tocar un destino, se abre la pantalla de detalle `app/destino/[id].tsx`.
+- El fondo, los textos, el buscador y los chips cambian según el tema.
+
+3. Detalle de destino – `app/destino/[id].tsx`
+----------------------------------------------
+- Toma el `id` de la ruta con `useLocalSearchParams`.
+- Busca el destino correspondiente en `destinos.ts`.
+- Muestra:
+  - Imagen principal del destino.
+  - Nombre, ubicación, tipo, duración, presupuesto, precio.
+  - Descripción.
+  - Sección de "Distribución de gastos" con chips (alojamiento, transporte, alimentación, entradas).
+  - Tours sugeridos relacionados.
+- Tiene el botón **"Añadir a mis planes"** que:
+  - Llama a `PlanesContext.agregarDestino(...)`.
+  - Redirige a la pestaña **Mis planes**.
+
+4. Mis planes – `app/(tabs)/mis-planes.tsx`
+-------------------------------------------
+- Lee la lista `planes` desde `PlanesContext`.
+- Si no hay destinos guardados, muestra un mensaje explicando cómo agregarlos desde Explorar.
+- Si hay destinos, muestra una lista de tarjetas con imagen, nombre, ubicación y precio.
+- Cada tarjeta es presionable y lleva a la pantalla de **Reserva** correspondiente (`app/reserva/[id].tsx`).
+- Toda esta vista también respeta el tema claro/oscuro.
+
+5. Reserva – `app/reserva/[id].tsx`
+-----------------------------------
+Esta pantalla replica la lógica de reservas que tienes en la web, pero adaptada a móvil.
+
+- Usa el `id` del plan para:
+  - Encontrar el plan en `PlanesContext`.
+  - Buscar el destino completo en `destinos.ts`.
+- Muestra:
+  - Header con flecha de volver y título **"Reserva"**.
+  - Una card principal con imagen, nombre y la **etapa actual** del proceso.
+
+Flujo de etapas
+----------------
+- Las etapas se definen en la constante:
+  `ETAPAS = ['borrador', 'confirmado', 'pendiente', 'pagado', 'finalizado']`.
+- Un estado `nivel` (0 a 4) indica en qué etapa estamos.
+- Según esa etapa, aparecen distintos botones:
+  - **Borrador**: botón **Confirmar**.
+  - **Confirmado**: botones **Ver destino** y **Seguir**.
+  - **Pendiente**: **Simular pago** y **Confirmar pago**.
+  - **Pagado**: **Reagendar** y **Seguir**.
+  - **Finalizado**: **Dejar reseña**.
+
+Gráfico de costos
+-----------------
+- Usa el objeto `gastos` del destino:
+  - `alojamiento`, `transporte`, `alimentacion`, `entradas`.
+- Calcula el total y dibuja un gráfico circular con `react-native-svg` (`Svg` + `Path`).
+- A un lado se muestra la leyenda con color, nombre del gasto y monto.
+
+Navegación dentro de Reserva
+----------------------------
+- Debajo del gráfico hay dos botones: **Anterior** y **Siguiente** que mueven el `nivel`.
+- Al final de la pantalla hay un botón **"Volver a Mis planes"** que navega a `/(tabs)/mis-planes`.
+- Toda la pantalla adapta los colores a light/dark.
+
+6. Chat – `app/(tabs)/chat.tsx`
+-------------------------------
+- Encima se muestra el `Header` global.
+- Debajo hay un pequeño header propio del chat (fondo verde):
+  - "PeruGo Asistente" y el estado "En línea".
+- El historial se muestra en un `ScrollView` usando los mensajes de `ChatContext.messages`.
+- Hay burbujas diferentes para usuario y asistente.
+- En la parte inferior hay una barra con:
+  - `TextInput` para escribir.
+  - Enviar (por enter o por acción) que llama a `sendTextMessage` → esto manda el texto al backend `/process`.
+  - Botón de parlante para TTS:
+    - Se basa en `lastAssistantText`.
+    - Usa `expo-speech` para leer en voz alta la respuesta.
+    - Cambia el ícono entre `Feather volume-2` y `volume-x` según esté o no reproduciendo.
+
+7. Header global – `components/Header.tsx`
+-----------------------------------------
+- Aparece arriba en las pantallas principales.
+- Incluye:
+  - Branding (texto/logo de PeruGo).
+  - Botón de micrófono para STT global:
+    - Usa `expo-av` y envía la grabación al endpoint `/sts`.
+  - Botón de tema (sol/luna) que llama a `UiThemeContext.toggleTheme()`.
+  - Acciones de perfil / login.
+
+Modo claro y oscuro
+-------------------
+- El tema se maneja con `UiThemeContext`.
+- El contexto expone `theme` (`'light' | 'dark'`) y `toggleTheme()`.
+- `_layout.tsx` envuelve toda la app con este provider.
+- Las pantallas calculan colores derivados a partir de `theme` (`isDark`, `screenBackground`, etc.).
+- El usuario puede cambiar de tema desde el header, además de respetar el modo del sistema cuando aplica.
+
+Audio: STT y TTS
+-----------------
+
+STT (voz a texto)
+-----------------
+- Se usa en el `Header` y en la pantalla de Inicio.
+- Flujo simplificado:
+  1. Pedir permisos de micrófono.
+  2. Configurar audio con `Audio.setAudioModeAsync`.
+  3. Crear un `Audio.Recording` y guardarlo en el estado.
+  4. Iniciar la grabación.
+  5. Al detener, descargarla y obtener la URI.
+  6. Enviar el archivo de audio al endpoint `/sts` con `FormData`.
+  7. Tomar el texto de la respuesta y colocarlo en los inputs o en el chat.
+
+TTS (texto a voz)
+-----------------
+- Está implementado en la pantalla de Chat.
+- Usa `expo-speech` y el valor de `lastAssistantText`.
+- El usuario puede iniciar o detener la reproducción con el mismo botón de parlante.
+
+Datos de destinos – `src/data/destinos.ts`
+------------------------------------------
+- Define el tipo `Destino` y un array `destinos` con varios lugares de Perú.
+- Cada destino trae:
+  - Campos básicos (id, nombre, ubicación, tipo, imagen, descripción).
+  - Precio, duración y nivel de presupuesto.
+  - Un objeto `gastos` con el desglose por categoría.
+  - Una lista de tours, cada uno con su propio precio y gastos.
+- Sirve como catálogo local y como respaldo cuando no se quiere depender siempre de la API remota.
+
+Mis planes – `src/context/PlanesContext.tsx`
+-------------------------------------------
+- Mantiene un arreglo de `planes` (destinos guardados).
+- Expone:
+  - `planes`.
+  - `setPlanes` para reemplazar la lista.
+  - `agregarDestino` para añadir un plan nuevo (evitando duplicados por `id`).
+- La pantalla `Mis planes` se construye a partir de este contexto.
+
+Autenticación
+-------------
+- `app/login.tsx` y `app/register.tsx` contienen los formularios de login y registro.
+- `AuthContext` maneja el estado de usuario logueado en memoria.
+- Está preparado para conectarse a un backend real de usuarios en el futuro.
+
+Configuración de Expo – `app.json`
+-----------------------------------
+- Define el nombre, slug y versión de la app.
+- Configura iconos, orientación (vertical), esquema y detalles de Android.
+- `userInterfaceStyle: 'automatic'` permite que la app siga también el modo del sistema.
+
+Scripts útiles – `package.json`
+--------------------------------
+- `npm start` → arranca el servidor de desarrollo de Expo.
+- `npm run android` → genera/ejecuta la build nativa para Android.
+- `npm run ios` → lo mismo para iOS (en macOS).
+- `npm run web` → ejecuta la app en modo web.
+- `npm run lint` → corre ESLint con la configuración de Expo.
+
+Cómo levantar el proyecto desde cero
+------------------------------------
+1. Clonar el repositorio.
+2. Ejecutar `npm install` para instalar dependencias.
+3. Lanzar `npx expo start` para iniciar el proyecto en modo desarrollo.
+4. Abrir la app:
+   - En un dispositivo físico con **Expo Go** escaneando el QR.
+   - O en un emulador Android/iOS usando `npx expo run:android` o `npx expo run:ios`.
+
+En resumen
+----------
+Este archivo sirve como guía rápida para entender cómo está armado PeruGoMobile: qué hace cada pantalla, dónde están los datos y cómo se conecta todo (tema, voz, backend de IA). La idea es que cualquiera que abra el repo pueda orientarse sin tener que leer todo el código desde cero.
