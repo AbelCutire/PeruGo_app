@@ -98,9 +98,19 @@ export default function HomeScreen() {
 
 					console.log('📤 Enviando audio a:', STT_URL);
 
+					const base64 = await FileSystem.readAsStringAsync(uri, {
+					    encoding: FileSystem.EncodingType.Base64,
+					});
+					
 					const response = await fetch(STT_URL, {
-						method: 'POST',
-						body: formData,
+					    method: "POST",
+					    headers: {
+					        "Content-Type": "application/json"
+					    },
+					    body: JSON.stringify({
+					        audio_base64: base64,
+					        format: "m4a"
+					    })
 					});
 
 					console.log('📥 Response status:', response.status);
