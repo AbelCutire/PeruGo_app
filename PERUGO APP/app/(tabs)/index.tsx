@@ -45,7 +45,31 @@ export default function HomeScreen() {
 				});
 
 				const rec = new Audio.Recording();
-				await rec.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+				
+				// Configuración optimizada para Speech-to-Text
+				await rec.prepareToRecordAsync({
+					android: {
+						extension: '.m4a',
+						outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+						audioEncoder: Audio.AndroidAudioEncoder.AAC,
+						sampleRate: 16000,
+						numberOfChannels: 1,
+						bitRate: 128000,
+					},
+					ios: {
+						extension: '.m4a',
+						outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+						audioQuality: Audio.IOSAudioQuality.HIGH,
+						sampleRate: 16000,
+						numberOfChannels: 1,
+						bitRate: 128000,
+					},
+					web: {
+						mimeType: 'audio/webm',
+						bitsPerSecond: 128000,
+					},
+				});
+				
 				await rec.startAsync();
 				setRecording(rec);
 			} else {
@@ -68,11 +92,11 @@ export default function HomeScreen() {
 					// React Native necesita un objeto con uri, type y name
 					formData.append('audio', {
 						uri: uri,
-						type: 'audio/wav',
-						name: 'recording.wav',
+						type: 'audio/m4a',
+						name: 'recording.m4a',
 					} as any);
 
-					console.log('Enviando audio a:', STT_URL);
+					console.log('📤 Enviando audio a:', STT_URL);
 
 					const response = await fetch(STT_URL, {
 						method: 'POST',
@@ -82,31 +106,34 @@ export default function HomeScreen() {
 						},
 					});
 
-					console.log('Response status:', response.status);
+					console.log('📥 Response status:', response.status);
 
 					if (!response.ok) {
 						const errorText = await response.text();
-						console.error('Error del servidor:', errorText);
+						console.error('❌ Error del servidor:', errorText);
 						throw new Error(`Error del servidor: ${response.status}`);
 					}
 
 					const data = await response.json();
-					console.log('Respuesta del servidor:', data);
+					console.log('✅ Respuesta del servidor:', data);
 
 					// Intentar obtener el texto de diferentes campos posibles
 					const text = data.llm_response || data.stt_text || data.text || '';
 					
-					if (text && text.trim()) {
+					// VALIDACIÓN: Solo proceder si hay texto real
+					if (text && text.trim().length > 0) {
+						console.log('📝 Texto transcrito:', text);
 						setSearchText(String(text));
-						// Opcionalmente, puedes enviar directamente al chat:
-						// await setExternalUserMessage(String(text));
-						// router.push('/(tabs)/chat');
 					} else {
-						Alert.alert('Sin respuesta', 'No se pudo transcribir el audio. Intenta hablar más claro.');
+						console.warn('⚠️ No se detectó voz en el audio');
+						Alert.alert(
+							'No se detectó voz',
+							'No pudimos escuchar nada. Intenta:\n\n• Hablar más cerca del micrófono\n• Hablar más fuerte\n• Reducir el ruido de fondo'
+						);
 					}
 
 				} catch (error) {
-					console.error('Error procesando audio:', error);
+					console.error('❌ Error procesando audio:', error);
 					Alert.alert(
 						'Error',
 						'No se pudo procesar el audio. Verifica tu conexión e intenta nuevamente.'
@@ -114,7 +141,7 @@ export default function HomeScreen() {
 				}
 			}
 		} catch (error) {
-			console.error('Error en grabación:', error);
+			console.error('❌ Error en grabación:', error);
 			Alert.alert('Error', 'Hubo un problema con la grabación. Intenta nuevamente.');
 			
 			if (recording) {
