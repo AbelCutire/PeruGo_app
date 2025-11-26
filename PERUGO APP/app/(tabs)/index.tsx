@@ -101,9 +101,6 @@ export default function HomeScreen() {
 					const response = await fetch(STT_URL, {
 						method: 'POST',
 						body: formData,
-						headers: {
-							'Content-Type': 'multipart/form-data',
-						},
 					});
 
 					console.log('📥 Response status:', response.status);
