@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, Image, Pressable } from 'react-native';
+import { View, Text, Image, Pressable, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Audio } from 'expo-av';
@@ -24,11 +24,11 @@ export function Header() {
 
   const toggleHeaderRecording = useCallback(async () => {
     try {
-      // Si no hay grabación activa, iniciamos una nueva
       if (!recording) {
+        // 1er toque: iniciar grabación
         const perm = await Audio.requestPermissionsAsync();
         if (!perm.granted) {
-          console.warn('Permiso de micrófono denegado');
+          Alert.alert('Permiso denegado', 'Necesitamos acceso al micrófono para esta función.');
           return;
         }
 
@@ -42,42 +42,78 @@ export function Header() {
         await rec.startAsync();
         setRecording(rec);
       } else {
-        // Ya hay una grabación: la detenemos y enviamos a STT
+        // 2º toque: detener y enviar a STT
         const current = recording;
         setRecording(null);
+        
         try {
           await current.stopAndUnloadAsync();
           const uri = current.getURI();
-          if (uri) {
-            const formData = new FormData();
-            formData.append('audio', {
-              uri,
-              name: 'input.wav',
-              type: 'audio/wav',
-            } as any);
-
-            try {
-              const res = await fetch(STT_URL, {
-                method: 'POST',
-                body: formData,
-              });
-              const data = await res.json();
-              const text = data.llm_response || data.stt_text || data.text || '';
-              if (text && text.trim()) {
-                await setExternalUserMessage(String(text));
-                router.push('/(tabs)/chat');
-              }
-            } catch (e) {
-              console.warn('Error enviando audio a STT desde header', e);
-            }
+          
+          if (!uri) {
+            Alert.alert('Error', 'No se pudo obtener el audio grabado.');
+            return;
           }
-        } catch (e) {
-          console.warn('Error deteniendo grabación en header', e);
+
+          // Crear FormData correctamente para React Native
+          const formData = new FormData();
+          
+          // React Native necesita un objeto con uri, type y name
+          formData.append('audio', {
+            uri: uri,
+            type: 'audio/wav',
+            name: 'recording.wav',
+          } as any);
+
+          console.log('Enviando audio a:', STT_URL);
+
+          const response = await fetch(STT_URL, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+
+          console.log('Response status:', response.status);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error del servidor:', errorText);
+            throw new Error(`Error del servidor: ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log('Respuesta del servidor:', data);
+
+          // Intentar obtener el texto de diferentes campos posibles
+          const text = data.llm_response || data.stt_text || data.text || '';
+          
+          if (text && text.trim()) {
+            await setExternalUserMessage(String(text));
+            router.push('/(tabs)/chat');
+          } else {
+            Alert.alert('Sin respuesta', 'No se pudo transcribir el audio. Intenta hablar más claro.');
+          }
+
+        } catch (error) {
+          console.error('Error procesando audio:', error);
+          Alert.alert(
+            'Error',
+            'No se pudo procesar el audio. Verifica tu conexión e intenta nuevamente.'
+          );
         }
       }
-    } catch (e) {
-      console.warn('Error manejando grabación en header', e);
+    } catch (error) {
+      console.error('Error en grabación:', error);
+      Alert.alert('Error', 'Hubo un problema con la grabación. Intenta nuevamente.');
+      
       if (recording) {
+        try {
+          await recording.stopAndUnloadAsync();
+        } catch (e) {
+          console.error('Error deteniendo grabación:', e);
+        }
         setRecording(null);
       }
     }
@@ -87,8 +123,6 @@ export function Header() {
     <View style={[styles.header, { backgroundColor: headerBackground }]}>
       <View style={styles.headerLeft}>
         <View style={styles.logoWrapper}>
-          {/* Reemplaza la ruta del require con la ruta real de tu logo en assets */}
-          {/* Ejemplo: <Image source={require('../assets/perugo-logo.png')} style={styles.logoImage} /> */}
           <Image
             source={require('../assets/images/perugo-logo.png')}
             style={styles.logoImage}
@@ -109,7 +143,6 @@ export function Header() {
         </Pressable>
 
         {user ? (
-          // Usuario logueado: mostrar solo icono de perfil que abre la pestaña Perfil
           <Pressable
             style={styles.iconButton}
             onPress={() => router.push('/(tabs)/perfil')}
