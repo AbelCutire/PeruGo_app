@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx
 import React, { useCallback, useState } from 'react';
-import { View, Text, Pressable, TextInput, ImageBackground } from 'react-native';
+import { View, Text, Pressable, TextInput, ImageBackground, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
@@ -35,7 +35,7 @@ export default function HomeScreen() {
 				// 1er toque: iniciar grabación
 				const perm = await Audio.requestPermissionsAsync();
 				if (!perm.granted) {
-					console.warn('Permiso de micrófono denegado');
+					Alert.alert('Permiso denegado', 'Necesitamos acceso al micrófono para esta función.');
 					return;
 				}
 
@@ -52,38 +52,77 @@ export default function HomeScreen() {
 				// 2º toque: detener y enviar a STT
 				const current = recording;
 				setRecording(null);
+				
 				try {
 					await current.stopAndUnloadAsync();
 					const uri = current.getURI();
-					if (uri) {
-						const formData = new FormData();
-						formData.append('audio', {
-							uri,
-							name: 'input.wav',
-							type: 'audio/wav',
-						} as any);
-
-						try {
-							const res = await fetch(STT_URL, {
-								method: 'POST',
-								body: formData,
-							});
-							const data = await res.json();
-							const text = data.llm_response || data.stt_text || data.text || '';
-							if (text && text.trim()) {
-								setSearchText(String(text));
-							}
-						} catch (e) {
-							console.warn('Error enviando audio a STT desde inicio', e);
-						}
+					
+					if (!uri) {
+						Alert.alert('Error', 'No se pudo obtener el audio grabado.');
+						return;
 					}
-				} catch (e) {
-					console.warn('Error deteniendo grabación en inicio', e);
+
+					// Crear FormData correctamente para React Native
+					const formData = new FormData();
+					
+					// React Native necesita un objeto con uri, type y name
+					formData.append('audio', {
+						uri: uri,
+						type: 'audio/wav',
+						name: 'recording.wav',
+					} as any);
+
+					console.log('Enviando audio a:', STT_URL);
+
+					const response = await fetch(STT_URL, {
+						method: 'POST',
+						body: formData,
+						headers: {
+							'Content-Type': 'multipart/form-data',
+						},
+					});
+
+					console.log('Response status:', response.status);
+
+					if (!response.ok) {
+						const errorText = await response.text();
+						console.error('Error del servidor:', errorText);
+						throw new Error(`Error del servidor: ${response.status}`);
+					}
+
+					const data = await response.json();
+					console.log('Respuesta del servidor:', data);
+
+					// Intentar obtener el texto de diferentes campos posibles
+					const text = data.llm_response || data.stt_text || data.text || '';
+					
+					if (text && text.trim()) {
+						setSearchText(String(text));
+						// Opcionalmente, puedes enviar directamente al chat:
+						// await setExternalUserMessage(String(text));
+						// router.push('/(tabs)/chat');
+					} else {
+						Alert.alert('Sin respuesta', 'No se pudo transcribir el audio. Intenta hablar más claro.');
+					}
+
+				} catch (error) {
+					console.error('Error procesando audio:', error);
+					Alert.alert(
+						'Error',
+						'No se pudo procesar el audio. Verifica tu conexión e intenta nuevamente.'
+					);
 				}
 			}
-		} catch (e) {
-			console.warn('Error manejando grabación en inicio', e);
+		} catch (error) {
+			console.error('Error en grabación:', error);
+			Alert.alert('Error', 'Hubo un problema con la grabación. Intenta nuevamente.');
+			
 			if (recording) {
+				try {
+					await recording.stopAndUnloadAsync();
+				} catch (e) {
+					console.error('Error deteniendo grabación:', e);
+				}
 				setRecording(null);
 			}
 		}
