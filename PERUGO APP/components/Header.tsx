@@ -42,20 +42,23 @@ export function Header() {
         // Configuración optimizada para Speech-to-Text
         await rec.prepareToRecordAsync({
           android: {
-            extension: '.m4a',
-            outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-            audioEncoder: Audio.AndroidAudioEncoder.AAC,
+            extension: '.amr',
+            outputFormat: Audio.AndroidOutputFormat.AMR_WB,
+            audioEncoder: Audio.AndroidAudioEncoder.AMR_WB,
             sampleRate: 16000,
             numberOfChannels: 1,
             bitRate: 128000,
           },
           ios: {
-            extension: '.m4a',
-            outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+            extension: '.wav',
+            outputFormat: Audio.IOSOutputFormat.LINEARPCM,
             audioQuality: Audio.IOSAudioQuality.HIGH,
             sampleRate: 16000,
             numberOfChannels: 1,
             bitRate: 128000,
+            linearPCMBitDepth: 16,
+            linearPCMIsBigEndian: false,
+            linearPCMIsFloat: false,
           },
           web: {
             mimeType: 'audio/webm',
@@ -199,3 +202,4 @@ export function Header() {
     </View>
   );
 }
+
