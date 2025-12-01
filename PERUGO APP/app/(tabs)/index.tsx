@@ -11,56 +11,14 @@ import { useUiTheme } from '../../src/context/UiThemeContext';
 import { useChat } from '../../src/context/ChatContext';
 import * as FileSystem from "expo-file-system";
 
-// =======================================================
-// FUNCIÓN NUEVA: ENVÍA EL AUDIO A BACKEND EN BASE64
-// =======================================================
-const sendAudioBase64 = async (uri: string, STT_URL: string, setSearchText: Function) => {
-  try {
-    // Convertir audio grabado en base64
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-
-    const response = await fetch(STT_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        audio_base64: base64,
-        format: "m4a",
-      }),
-    });
-
-    const data = await response.json();
-    console.log("Respuesta del servidor:", data);
-
-    const text = data.stt_text || data.transcript || "";
-
-    if (text.trim().length > 0) {
-      setSearchText(text);
-    } else {
-      Alert.alert("No se detectó voz", "No se reconoció audio. Intenta hablar más fuerte o más cerca del micrófono.");
-    }
-
-  } catch (err) {
-    console.error("Error enviando audio base64:", err);
-    Alert.alert("Error", "No se pudo enviar audio al servidor.");
-  }
-};
-
-// =======================================================
-// COMPONENTE PRINCIPAL
-// =======================================================
 export default function HomeScreen() {
   const { theme } = useUiTheme();
   const router = useRouter();
-  const { setExternalUserMessage } = useChat();
+  const { setExternalUserMessage, addGeneratedConversation } = useChat();
   const [searchText, setSearchText] = useState('');
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
 
   const isRecording = !!recording;
-  const screenBackground = theme === 'light' ? '#f7e9d3' : '#020617';
   const isDark = theme === 'dark';
   const micBackground = isDark ? '#111827' : '#ffffff';
   const micIconColor = isDark ? '#e5e7eb' : '#111827';
@@ -72,9 +30,13 @@ export default function HomeScreen() {
 
   const STT_URL = "https://perugobackend-flask-production.up.railway.app/sts";
 
-  // =======================================================
-  // GRABAR Y ENVIAR AUDIO A BACKEND
-  // =======================================================
+  const handleSearchToChat = useCallback(async () => {
+    const value = searchText.trim();
+    if (!value) return;
+    await setExternalUserMessage(value);
+    router.push('/(tabs)/chat');
+  }, [router, searchText, setExternalUserMessage]);
+
   const toggleHomeRecording = useCallback(async () => {
     try {
       if (!recording) {
@@ -132,8 +94,43 @@ export default function HomeScreen() {
           return;
         }
 
-        // === AQUÍ SE ENVÍA BASE64, NO MULTIPART ===
-        await sendAudioBase64(uri, STT_URL, setSearchText);
+        // Enviar a Backend
+        try {
+          const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+      
+          const response = await fetch(STT_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              audio_base64: base64,
+            }),
+          });
+      
+          const data = await response.json();
+          console.log("Respuesta del servidor (Home):", data);
+          
+          // data.stt_text = Lo que dijo el usuario
+          // data.llm_response = Lo que respondió la IA
+          if (data.stt_text && data.llm_response) {
+            // Agregamos ambos al chat
+            addGeneratedConversation(data.stt_text, data.llm_response);
+            // Redirigimos al chat
+            router.push('/(tabs)/chat');
+          } else if (data.stt_text) {
+            // Si por alguna razón solo hay texto de usuario, lo ponemos en el buscador
+            setSearchText(data.stt_text);
+          } else {
+            Alert.alert("No se detectó voz", "Intenta hablar más fuerte.");
+          }
+
+        } catch (err) {
+          console.error("Error enviando audio:", err);
+          Alert.alert("Error", "No se pudo procesar el audio.");
+        }
       }
 
     } catch (e) {
@@ -141,17 +138,7 @@ export default function HomeScreen() {
       Alert.alert("Error", "Hubo un problema con la grabación.");
       setRecording(null);
     }
-  }, [recording]);
-
-  // =======================================================
-  // REDIRIGIR A CHAT
-  // =======================================================
-  const handleSearchToChat = useCallback(async () => {
-    const value = searchText.trim();
-    if (!value) return;
-    await setExternalUserMessage(value);
-    router.push('/(tabs)/chat');
-  }, [router, searchText, setExternalUserMessage]);
+  }, [recording, addGeneratedConversation, router]);
 
   return (
     <View style={styles.screen}>
@@ -197,4 +184,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
