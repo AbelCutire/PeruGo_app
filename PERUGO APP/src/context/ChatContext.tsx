@@ -11,6 +11,7 @@ export type ChatContextValue = {
   loading: boolean;
   sendTextMessage: (text: string) => Promise<void>;
   setExternalUserMessage: (text: string) => Promise<void>;
+  addGeneratedConversation: (userText: string, assistantText: string) => void;
   lastAssistantText: string | null;
 };
 
@@ -94,9 +95,26 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     await coreSend(text);
   }, [coreSend]);
 
+  // NUEVA FUNCIÓN: Agrega la conversación completa (User + AI) sin llamar a la API
+  const addGeneratedConversation = useCallback((userText: string, assistantText: string) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now().toString() + '-user', sender: 'user', text: userText },
+      { id: Date.now().toString() + '-assistant', sender: 'assistant', text: assistantText },
+    ]);
+    setLastAssistantText(assistantText);
+  }, []);
+
   return (
     <ChatContext.Provider
-      value={{ messages, loading, sendTextMessage, setExternalUserMessage, lastAssistantText }}
+      value={{ 
+        messages, 
+        loading, 
+        sendTextMessage, 
+        setExternalUserMessage, 
+        addGeneratedConversation, 
+        lastAssistantText 
+      }}
     >
       {children}
     </ChatContext.Provider>
