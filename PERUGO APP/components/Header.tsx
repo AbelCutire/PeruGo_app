@@ -12,7 +12,7 @@ export function Header() {
   const { theme, toggleTheme } = useUiTheme();
   const { user } = useAuth();
   const router = useRouter();
-  const { setExternalUserMessage } = useChat();
+  const { addGeneratedConversation } = useChat();
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const isRecording = !!recording;
 
@@ -25,10 +25,9 @@ export function Header() {
   const toggleHeaderRecording = useCallback(async () => {
     try {
       if (!recording) {
-        // 1er toque: iniciar grabación
         const perm = await Audio.requestPermissionsAsync();
         if (!perm.granted) {
-          Alert.alert('Permiso denegado', 'Necesitamos acceso al micrófono para esta función.');
+          Alert.alert('Permiso denegado', 'Necesitamos acceso al micrófono.');
           return;
         }
 
@@ -39,7 +38,6 @@ export function Header() {
 
         const rec = new Audio.Recording();
         
-        // Configuración optimizada para Speech-to-Text
         await rec.prepareToRecordAsync({
           android: {
             extension: '.amr',
@@ -69,7 +67,6 @@ export function Header() {
         await rec.startAsync();
         setRecording(rec);
       } else {
-        // 2º toque: detener y enviar a STT
         const current = recording;
         setRecording(null);
         
@@ -82,17 +79,14 @@ export function Header() {
             return;
           }
 
-          // Crear FormData correctamente para React Native
           const formData = new FormData();
-          
-          // React Native necesita un objeto con uri, type y name
           formData.append('audio', {
             uri: uri,
-            type: 'audio/m4a',
-            name: 'recording.m4a',
+            type: 'audio/wav', // Type genérico, el backend detecta por bytes
+            name: 'recording.wav',
           } as any);
 
-          console.log('📤 Enviando audio a:', STT_URL);
+          console.log('📤 Enviando audio (Header)...');
 
           const response = await fetch(STT_URL, {
             method: 'POST',
@@ -102,55 +96,38 @@ export function Header() {
             },
           });
 
-          console.log('📥 Response status:', response.status);
-
           if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Error del servidor:', errorText);
             throw new Error(`Error del servidor: ${response.status}`);
           }
 
           const data = await response.json();
-          console.log('✅ Respuesta del servidor:', data);
+          console.log('✅ Respuesta del servidor (Header):', data);
 
-          // Intentar obtener el texto de diferentes campos posibles
-          const text = data.llm_response || data.stt_text || data.text || '';
-          
-          // VALIDACIÓN: Solo proceder si hay texto real
-          if (text && text.trim().length > 0) {
-            console.log('📝 Texto transcrito:', text);
-            await setExternalUserMessage(String(text));
+          // data.stt_text = Lo que dijiste
+          // data.llm_response = Lo que respondió Groq
+          if (data.stt_text && data.llm_response) {
+            // Aquí está la corrección clave:
+            // Usamos la nueva función para separar quién dijo qué
+            addGeneratedConversation(data.stt_text, data.llm_response);
             router.push('/(tabs)/chat');
           } else {
-            console.warn('⚠️ No se detectó voz en el audio');
-            Alert.alert(
-              'No se detectó voz', 
-              'No pudimos escuchar nada. Intenta:\n\n• Hablar más cerca del micrófono\n• Hablar más fuerte\n• Reducir el ruido de fondo'
-            );
+            Alert.alert('No se detectó voz', 'Intenta hablar más fuerte.');
           }
 
         } catch (error) {
           console.error('❌ Error procesando audio:', error);
-          Alert.alert(
-            'Error',
-            'No se pudo procesar el audio. Verifica tu conexión e intenta nuevamente.'
-          );
+          Alert.alert('Error', 'No se pudo procesar el audio.');
         }
       }
     } catch (error) {
       console.error('❌ Error en grabación:', error);
-      Alert.alert('Error', 'Hubo un problema con la grabación. Intenta nuevamente.');
-      
+      Alert.alert('Error', 'Hubo un problema con la grabación.');
       if (recording) {
-        try {
-          await recording.stopAndUnloadAsync();
-        } catch (e) {
-          console.error('Error deteniendo grabación:', e);
-        }
+        try { await recording.stopAndUnloadAsync(); } catch (e) {}
         setRecording(null);
       }
     }
-  }, [recording, router, setExternalUserMessage]);
+  }, [recording, router, addGeneratedConversation]);
 
   return (
     <View style={[styles.header, { backgroundColor: headerBackground }]}>
@@ -202,5 +179,3 @@ export function Header() {
     </View>
   );
 }
-
-
