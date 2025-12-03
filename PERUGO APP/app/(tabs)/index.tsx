@@ -1,5 +1,3 @@
-// app/(tabs)/index.tsx
-
 import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, TextInput, ImageBackground, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -53,6 +51,7 @@ export default function HomeScreen() {
 
         const rec = new Audio.Recording();
 
+        // Configuración para Android (AMR) e iOS (WAV)
         await rec.prepareToRecordAsync({
           android: {
             extension: '.amr',
@@ -94,12 +93,12 @@ export default function HomeScreen() {
           return;
         }
 
-        // Enviar a Backend
+        // Leer archivo y enviar al backend
         try {
           const base64 = await FileSystem.readAsStringAsync(uri, {
             encoding: FileSystem.EncodingType.Base64,
           });
-      
+
           const response = await fetch(STT_URL, {
             method: "POST",
             headers: {
@@ -109,19 +108,20 @@ export default function HomeScreen() {
               audio_base64: base64,
             }),
           });
-      
+
           const data = await response.json();
-          console.log("Respuesta del servidor (Home):", data);
-          
+          console.log("Respuesta Index:", data);
+
+          // LÓGICA CORREGIDA:
           // data.stt_text = Lo que dijo el usuario
           // data.llm_response = Lo que respondió la IA
           if (data.stt_text && data.llm_response) {
-            // Agregamos ambos al chat
+            // Inyectamos la conversación en el historial sin disparar otro fetch
             addGeneratedConversation(data.stt_text, data.llm_response);
             // Redirigimos al chat
             router.push('/(tabs)/chat');
           } else if (data.stt_text) {
-            // Si por alguna razón solo hay texto de usuario, lo ponemos en el buscador
+            // Si solo hay texto de usuario, lo ponemos en el buscador
             setSearchText(data.stt_text);
           } else {
             Alert.alert("No se detectó voz", "Intenta hablar más fuerte.");
@@ -135,7 +135,6 @@ export default function HomeScreen() {
 
     } catch (e) {
       console.error("Error en grabación:", e);
-      Alert.alert("Error", "Hubo un problema con la grabación.");
       setRecording(null);
     }
   }, [recording, addGeneratedConversation, router]);
