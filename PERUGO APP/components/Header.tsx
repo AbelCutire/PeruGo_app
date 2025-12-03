@@ -7,12 +7,13 @@ import { styles } from './header.styles';
 import { useUiTheme } from '../src/context/UiThemeContext';
 import { useAuth } from '../src/context/AuthContext';
 import { useChat } from '../src/context/ChatContext';
+import * as FileSystem from "expo-file-system";
 
 export function Header() {
   const { theme, toggleTheme } = useUiTheme();
   const { user } = useAuth();
   const router = useRouter();
-  const { addGeneratedConversation } = useChat();
+  const { addGeneratedConversation } = useChat(); // Usamos la nueva función
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const isRecording = !!recording;
 
@@ -79,20 +80,20 @@ export function Header() {
             return;
           }
 
-          const formData = new FormData();
-          formData.append('audio', {
-            uri: uri,
-            type: 'audio/wav', // Type genérico, el backend detecta por bytes
-            name: 'recording.wav',
-          } as any);
+          // Usamos JSON/Base64 para consistencia con index.tsx
+          const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
 
           console.log('📤 Enviando audio (Header)...');
 
           const response = await fetch(STT_URL, {
             method: 'POST',
-            body: formData,
+            body: JSON.stringify({
+              audio_base64: base64,
+            }),
             headers: {
-              'Content-Type': 'multipart/form-data',
+              'Content-Type': 'application/json',
             },
           });
 
@@ -101,13 +102,11 @@ export function Header() {
           }
 
           const data = await response.json();
-          console.log('✅ Respuesta del servidor (Header):', data);
+          console.log('✅ Respuesta Header:', data);
 
-          // data.stt_text = Lo que dijiste
-          // data.llm_response = Lo que respondió Groq
+          // LÓGICA CORREGIDA:
           if (data.stt_text && data.llm_response) {
-            // Aquí está la corrección clave:
-            // Usamos la nueva función para separar quién dijo qué
+            // Usuario -> stt_text | IA -> llm_response
             addGeneratedConversation(data.stt_text, data.llm_response);
             router.push('/(tabs)/chat');
           } else {
@@ -121,7 +120,6 @@ export function Header() {
       }
     } catch (error) {
       console.error('❌ Error en grabación:', error);
-      Alert.alert('Error', 'Hubo un problema con la grabación.');
       if (recording) {
         try { await recording.stopAndUnloadAsync(); } catch (e) {}
         setRecording(null);
