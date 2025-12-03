@@ -11,6 +11,7 @@ export type ChatContextValue = {
   loading: boolean;
   sendTextMessage: (text: string) => Promise<void>;
   setExternalUserMessage: (text: string) => Promise<void>;
+  // NUEVA FUNCIÓN: Agrega la conversación (Usuario + IA) directamente
   addGeneratedConversation: (userText: string, assistantText: string) => void;
   lastAssistantText: string | null;
 };
@@ -31,28 +32,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [lastAssistantText, setLastAssistantText] = useState<string | null>(null);
 
   const fetchReply = useCallback(async (text: string) => {
-    const res = await fetch(CHAT_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
+    try {
+      const res = await fetch(CHAT_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
+      let reply = 'No se obtuvo respuesta.';
 
-    let reply = 'No se obtuvo respuesta.';
-
-    if (typeof data.text_response === 'object' && data.text_response !== null) {
-      reply = data.text_response.reply ?? JSON.stringify(data.text_response);
-    } else if (typeof data.text_response === 'string') {
-      try {
-        const parsed = JSON.parse(data.text_response);
-        reply = parsed.reply ?? data.text_response;
-      } catch {
+      if (typeof data.text_response === 'object' && data.text_response !== null) {
+        reply = data.text_response.reply ?? JSON.stringify(data.text_response);
+      } else if (typeof data.text_response === 'string') {
         reply = data.text_response;
       }
+      return String(reply);
+    } catch (error) {
+      return 'Error de conexión con el asistente.';
     }
-
-    return String(reply);
   }, []);
 
   const coreSend = useCallback(async (text: string) => {
@@ -95,7 +93,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     await coreSend(text);
   }, [coreSend]);
 
-  // NUEVA FUNCIÓN: Agrega la conversación completa (User + AI) sin llamar a la API
+  // IMPLEMENTACIÓN DE LA NUEVA FUNCIÓN
   const addGeneratedConversation = useCallback((userText: string, assistantText: string) => {
     setMessages((prev) => [
       ...prev,
