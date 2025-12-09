@@ -1,7 +1,8 @@
 // app/destino/[id].tsx
 import React, { useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { View, Text, ScrollView, Image, Pressable } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable, Modal } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { destinos } from '../../src/data/destinos';
 import { usePlanes } from '../../src/context/PlanesContext';
 import { useUiTheme } from '../../src/context/UiThemeContext';
@@ -24,6 +25,7 @@ export default function DestinoScreen() {
   }, [destino, tourParam]);
 
   const [tourSeleccionado, setTourSeleccionado] = useState<any | null>(tourInicial);
+  const [showMap, setShowMap] = useState(false);
 
   if (!destino) {
     return (
@@ -38,23 +40,49 @@ export default function DestinoScreen() {
 
   const isDark = theme === 'dark';
   const containerBackground = isDark ? '#020617' : '#f8fafc';
+  const mapQuery = encodeURIComponent(
+    destino.nombre
+      ? `${destino.nombre}, ${destino.ubicacion}`
+      : destino.ubicacion || 'Perú'
+  );
+  const mapUrl = `https://www.google.com/maps?q=${mapQuery}`;
 
   return (
-    <ScrollView
-      style={{ backgroundColor: containerBackground }}
-      contentContainerStyle={[styles.container, { backgroundColor: containerBackground }]}
-    >
+    <>
+      <ScrollView
+        style={{ backgroundColor: containerBackground }}
+        contentContainerStyle={[styles.container, { backgroundColor: containerBackground }]}
+      >
       <View style={styles.heroWrapper}>
         <Image source={{ uri: destino.imagen }} style={styles.heroImage} />
       </View>
 
       <Text style={[styles.title, isDark && { color: '#e5e7eb' }]}>{destino.nombre}</Text>
       <Text style={[styles.location, isDark && { color: '#9ca3af' }]}>{destino.ubicacion}</Text>
-      <Text style={[styles.meta, isDark && { color: '#9ca3af' }]}>
+      <Text style={[styles.meta, isDark && { color: '#9ca3af' }]}> 
         {destino.tipo} · {destino.duracion} · {destino.presupuesto}
       </Text>
 
       <Text style={[styles.price, isDark && { color: '#22c55e' }]}>Desde S/ {destino.precio} aprox.</Text>
+
+      <Text style={[styles.sectionTitle, isDark && { color: '#e5e7eb' }]}>Mapa del destino</Text>
+      <Pressable
+        style={[
+          styles.mapButton,
+          isDark ? styles.mapButtonDark : styles.mapButtonLight,
+        ]}
+        onPress={() => setShowMap(true)}
+      >
+        <Image
+          source={require('../../assets/images/logo-Ubicacion.png')}
+          style={styles.mapButtonIcon}
+          resizeMode="cover"
+        />
+        <View style={styles.mapButtonTextContainer}>
+          <Text style={[styles.mapButtonTitle, isDark && { color: '#e5e7eb' }]}>Ver mapa del destino</Text>
+          <Text style={[styles.mapButtonSubtitle, isDark && { color: '#cbd5f5' }]}>{destino.ubicacion}</Text>
+        </View>
+      </Pressable>
 
       <Text style={[styles.sectionTitle, isDark && { color: '#e5e7eb' }]}>Descripción</Text>
       <Text style={[styles.paragraph, isDark && { color: '#cbd5f5' }]}>{destino.descripcion}</Text>
@@ -208,6 +236,29 @@ export default function DestinoScreen() {
       <Pressable style={styles.secondaryButton} onPress={() => router.back()}>
         <Text style={styles.secondaryButtonText}>Volver</Text>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+
+      <Modal
+        visible={showMap}
+        animationType="slide"
+        onRequestClose={() => setShowMap(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Mapa de {destino.nombre}</Text>
+            <Pressable
+              style={styles.modalCloseButton}
+              onPress={() => setShowMap(false)}
+            >
+              <Text style={styles.modalCloseButtonText}>Cerrar</Text>
+            </Pressable>
+          </View>
+          <WebView
+            source={{ uri: mapUrl }}
+            style={styles.modalMap}
+          />
+        </View>
+      </Modal>
+    </>
   );
 }
