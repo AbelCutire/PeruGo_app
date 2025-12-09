@@ -40,6 +40,43 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 8,
   },
+  mapButton: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  mapButtonLight: {
+    backgroundColor: '#e0f2fe',
+  },
+  mapButtonDark: {
+    backgroundColor: '#0b1120',
+  },
+  mapButtonIcon: {
+    width: 130,
+    height: 90,
+  },
+  mapButtonTextContainer: {
+    flex: 1,
+    paddingHorizontal: 12,
+  },
+  mapButtonTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  mapButtonSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#475569',
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -103,6 +140,38 @@ export const styles = StyleSheet.create({
     marginBottom: 24,
   },
   secondaryButtonText: { color: '#0f172a', fontWeight: '600' },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#020617',
+  },
+  modalHeader: {
+    paddingTop: 48,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#020617',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#e5e7eb',
+  },
+  modalCloseButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#e5e7eb',
+  },
+  modalCloseButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  modalMap: {
+    flex: 1,
+  },
   summaryBox: {
     marginHorizontal: 16,
     marginTop: 12,
