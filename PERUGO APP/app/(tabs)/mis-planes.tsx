@@ -1,103 +1,189 @@
-// app/(tabs)/mis-planes.tsx
-import React from 'react';
-import { View, Text, FlatList, Image, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
-import { usePlanes } from '../../src/context/PlanesContext';
-import { useUiTheme } from '../../src/context/UiThemeContext';
-import { styles } from './misPlanesStyles';
-
-export default function MisPlanesScreen() {
-  const router = useRouter();
-  const { planes } = usePlanes();
-  const { theme } = useUiTheme();
-  const isDark = theme === 'dark';
-  const containerBackground = isDark ? '#020617' : '#f8fafc';
-  const titleColor = isDark ? '#f9fafb' : '#0f172a';
-  const subtitleColor = isDark ? '#e5e7eb' : '#64748b';
-  const hintColor = isDark ? '#cbd5f5' : '#94a3b8';
-  // Tarjetas más profesionales en modo noche: fondo oscuro neutro con borde azul grisáceo
-  const cardBackground = isDark ? '#020617' : '#ffffff';
-  const cardBorderColor = isDark ? '#1e293b' : '#e2e8f0';
-  const cardTitleColor = isDark ? '#e5e7eb' : '#0f172a';
-  const cardSubtitleColor = isDark ? '#9ca3af' : '#64748b';
-  const cardPriceColor = isDark ? '#22c55e' : '#16a34a';
-
-  const estadoLabel: Record<string, string> = {
-    borrador: 'Borrador',
-    pendiente: 'Pendiente de pago',
-    confirmado: 'Confirmado',
-    cancelado: 'Cancelado',
-    completado: 'Completado',
-  };
-
-  const estadoColor: Record<string, string> = {
-    borrador: '#9ca3af',
-    pendiente: '#facc15',
-    confirmado: '#22c55e',
-    cancelado: '#ef4444',
-    completado: '#3b82f6',
-  };
-
-  return (
-    <View style={[styles.container, { backgroundColor: containerBackground }]}>
-      <Text style={[styles.title, { color: titleColor }]}>Mis planes</Text>
-
-      {planes.length === 0 ? (
-        <>
-          <Text style={[styles.subtitle, { color: subtitleColor }]}>
-            Todavía no has agregado destinos a tus planes.
-          </Text>
-          <Text style={[styles.hint, { color: hintColor }]}>
-            Ve a Explorar, entra a un destino y toca "Añadir a mis planes".
-          </Text>
-        </>
-      ) : (
-        <FlatList
-          data={planes}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => router.push(`/reserva/${item.id}`)}
-              style={({ pressed }) => [
-                styles.card,
-                {
-                  backgroundColor: cardBackground,
-                  borderColor: cardBorderColor,
-                  opacity: pressed ? 0.9 : 1,
-                  borderLeftWidth: 6,
-                  borderLeftColor: estadoColor[item.estado] || cardBorderColor,
-                },
-              ]}
-            >
-              {item.imagen ? (
-                <Image source={{ uri: item.imagen }} style={styles.cardImage} />
-              ) : null}
-              <View style={styles.cardInfo}>
-                <Text style={[styles.cardTitle, { color: cardTitleColor }]}>{item.destino}</Text>
-                {item.tour ? (
-                  <Text style={[styles.cardSubtitle, { color: cardSubtitleColor }]}>{item.tour}</Text>
-                ) : item.ubicacion ? (
-                  <Text style={[styles.cardSubtitle, { color: cardSubtitleColor }]}>{item.ubicacion}</Text>
-                ) : null}
-                {item.estado && (
-                  <Text style={[styles.cardEstado, { color: cardSubtitleColor }]}>
-                    Estado: {estadoLabel[item.estado] || item.estado}
-                  </Text>
-                )}
-                {item.fecha_inicio && item.fecha_fin && (
-                  <Text style={[styles.cardEstado, { color: '#22c55e' }]}>
-                    📅 {item.fecha_inicio} al {item.fecha_fin}
-                  </Text>
-                )}
-                {item.precio != null ? (
-                  <Text style={[styles.cardPrice, { color: cardPriceColor }]}>Desde S/ {item.precio}</Text>
-                ) : null}
-              </View>
-            </Pressable>
-          )}
-        />
-      )}
-    </View>
-  );
-}
+[{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'contentContainer' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 74,
+	"startColumn": 72,
+	"endLineNumber": 74,
+	"endColumn": 88,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'infoContainer' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'. Did you mean 'container'?",
+	"source": "ts",
+	"startLineNumber": 80,
+	"startColumn": 27,
+	"endLineNumber": 80,
+	"endColumn": 40,
+	"relatedInformation": [
+		{
+			"startLineNumber": 4,
+			"startColumn": 3,
+			"endLineNumber": 4,
+			"endColumn": 35,
+			"message": "'container' is declared here.",
+			"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/destinoStyles.ts"
+		}
+	],
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'description' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 83,
+	"startColumn": 29,
+	"endLineNumber": 83,
+	"endColumn": 40,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'tourCardSelected' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 91,
+	"startColumn": 61,
+	"endLineNumber": 91,
+	"endColumn": 77,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'tourName' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 94,
+	"startColumn": 35,
+	"endLineNumber": 94,
+	"endColumn": 43,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'tourDesc' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 95,
+	"startColumn": 35,
+	"endLineNumber": 95,
+	"endColumn": 43,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'tourFooter' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 96,
+	"startColumn": 35,
+	"endLineNumber": 96,
+	"endColumn": 45,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'tourDuration' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 97,
+	"startColumn": 37,
+	"endLineNumber": 97,
+	"endColumn": 49,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'duracion' does not exist on type '{ nombre: string; descripcion: string; precio: number; incluye: string[]; gastos: { alojamiento: number; transporte: number; alimentacion: number; entradas: number; }; }'.",
+	"source": "ts",
+	"startLineNumber": 97,
+	"startColumn": 59,
+	"endLineNumber": 97,
+	"endColumn": 67,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'checkIcon' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 101,
+	"startColumn": 37,
+	"endLineNumber": 101,
+	"endColumn": 46,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'footer' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 110,
+	"startColumn": 27,
+	"endLineNumber": 110,
+	"endColumn": 33,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'addButton' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 113,
+	"startColumn": 20,
+	"endLineNumber": 113,
+	"endColumn": 29,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2339",
+	"severity": 8,
+	"message": "Property 'addButtonDisabled' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'.",
+	"source": "ts",
+	"startLineNumber": 114,
+	"startColumn": 56,
+	"endLineNumber": 114,
+	"endColumn": 73,
+	"origin": "extHost1"
+},{
+	"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/[id].tsx",
+	"owner": "typescript",
+	"code": "2551",
+	"severity": 8,
+	"message": "Property 'addButtonText' does not exist on type '{ container: { paddingBottom: number; }; center: { flex: number; justifyContent: \"center\"; alignItems: \"center\"; }; heroWrapper: { marginHorizontal: number; marginTop: number; borderRadius: number; ... 5 more ...; elevation: number; }; ... 39 more ...; backButtonText: { ...; }; }'. Did you mean 'backButtonText'?",
+	"source": "ts",
+	"startLineNumber": 122,
+	"startColumn": 33,
+	"endLineNumber": 122,
+	"endColumn": 46,
+	"relatedInformation": [
+		{
+			"startLineNumber": 231,
+			"startColumn": 3,
+			"endLineNumber": 231,
+			"endColumn": 40,
+			"message": "'backButtonText' is declared here.",
+			"resource": "/d:/UCSP/Cursos/3 Semestre/Desarrollo Basado en Plataformas/PeruGOapp/PeruGo_app/PERUGO APP/app/destino/destinoStyles.ts"
+		}
+	],
+	"origin": "extHost1"
+}]

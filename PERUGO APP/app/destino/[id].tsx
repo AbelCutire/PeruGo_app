@@ -1,264 +1,130 @@
-// app/destino/[id].tsx
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
+import { View, Text, Image, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { View, Text, ScrollView, Image, Pressable, Modal } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { Ionicons } from '@expo/vector-icons';
 import { destinos } from '../../src/data/destinos';
-import { usePlanes } from '../../src/context/PlanesContext';
-import { useUiTheme } from '../../src/context/UiThemeContext';
-import { useAuth } from '../../src/context/AuthContext';
 import { styles } from './destinoStyles';
+import { usePlanes } from '../../src/context/PlanesContext';
+import { useAuth } from '../../src/context/AuthContext';
 
 export default function DestinoScreen() {
-  const params = useLocalSearchParams<{ id: string; tour?: string; fromReserva?: string }>();
-  const { id, tour: tourParam, fromReserva } = params;
+  const { id } = useLocalSearchParams();
   const router = useRouter();
   const { agregarDestino } = usePlanes();
-  const { theme } = useUiTheme();
-  const { user } = useAuth();
+  const { token } = useAuth(); // Para verificar si está logueado
 
+  // Buscar el destino en la data estática
   const destino = destinos.find((d) => d.id === id);
-  const tourInicial = useMemo(() => {
-    if (!destino || !tourParam) return null;
-    const decodedTour = decodeURIComponent(String(tourParam));
-    return destino.tours?.find((t: any) => t.nombre === decodedTour) || null;
-  }, [destino, tourParam]);
-
-  const [tourSeleccionado, setTourSeleccionado] = useState<any | null>(tourInicial);
-  const [showMap, setShowMap] = useState(false);
+  const [tourSeleccionado, setTourSeleccionado] = useState<any>(null);
+  const [guardando, setGuardando] = useState(false);
 
   if (!destino) {
     return (
-      <View style={styles.center}>
-        <Text>No se encontró el destino.</Text>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Volver</Text>
-        </Pressable>
+      <View style={styles.container}>
+        <Text style={styles.title}>Destino no encontrado</Text>
       </View>
     );
   }
 
-  const isDark = theme === 'dark';
-  const containerBackground = isDark ? '#020617' : '#f8fafc';
-  const mapQuery = encodeURIComponent(
-    destino.nombre
-      ? `${destino.nombre}, ${destino.ubicacion}`
-      : destino.ubicacion || 'Perú'
-  );
-  const mapUrl = `https://www.google.com/maps?q=${mapQuery}`;
+  const handleAgregarPlan = async () => {
+    if (!tourSeleccionado) {
+      Alert.alert('Atención', 'Selecciona un plan (tour) primero.');
+      return;
+    }
+
+    if (!token) {
+      Alert.alert('Inicia sesión', 'Debes estar logueado para guardar planes.', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Ir al Login', onPress: () => router.push('/login') },
+      ]);
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      // Extraer número de días aprox
+      const duracionMatch = tourSeleccionado.duracion?.match(/(\d+)\s*día/i);
+      const dias = duracionMatch ? parseInt(duracionMatch[1]) : 1;
+
+      // Llamar al contexto (que llama a la API)
+      await agregarDestino({
+        destino_id: destino.id,
+        destino: destino.nombre,
+        tour: tourSeleccionado.nombre,
+        precio: tourSeleccionado.precio,
+        duracion: tourSeleccionado.duracion || destino.duracion,
+        duracion_dias: dias,
+        gastos: tourSeleccionado.gastos,
+        estado: 'borrador',
+      });
+
+      Alert.alert('¡Éxito!', 'Plan guardado en la nube.', [
+        { text: 'Seguir explorando', style: 'cancel' },
+        { text: 'Ver mis planes', onPress: () => router.push('/(tabs)/mis-planes') },
+      ]);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'No se pudo guardar el plan. Intenta nuevamente.');
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   return (
-    <>
-      <ScrollView
-        style={{ backgroundColor: containerBackground }}
-        contentContainerStyle={[styles.container, { backgroundColor: containerBackground }]}
-      >
-      <View style={styles.heroWrapper}>
-        <Image source={{ uri: destino.imagen }} style={styles.heroImage} />
-      </View>
-
-      <Text style={[styles.title, isDark && { color: '#e5e7eb' }]}>{destino.nombre}</Text>
-      <Text style={[styles.location, isDark && { color: '#9ca3af' }]}>{destino.ubicacion}</Text>
-      <Text style={[styles.meta, isDark && { color: '#9ca3af' }]}> 
-        {destino.tipo} · {destino.duracion} · {destino.presupuesto}
-      </Text>
-
-      <Text style={[styles.price, isDark && { color: '#22c55e' }]}>Desde S/ {destino.precio} aprox.</Text>
-
-      <Text style={[styles.sectionTitle, isDark && { color: '#e5e7eb' }]}>Mapa del destino</Text>
-      <Pressable
-        style={[
-          styles.mapButton,
-          isDark ? styles.mapButtonDark : styles.mapButtonLight,
-        ]}
-        onPress={() => setShowMap(true)}
-      >
-        <Image
-          source={require('../../assets/images/logo-Ubicacion.png')}
-          style={styles.mapButtonIcon}
-          resizeMode="cover"
-        />
-        <View style={styles.mapButtonTextContainer}>
-          <Text style={[styles.mapButtonTitle, isDark && { color: '#e5e7eb' }]}>Ver mapa del destino</Text>
-          <Text style={[styles.mapButtonSubtitle, isDark && { color: '#cbd5f5' }]}>{destino.ubicacion}</Text>
-        </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <Image source={{ uri: destino.imagen }} style={styles.heroImage} />
+      <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <Ionicons name="arrow-back" size={24} color="#fff" />
       </Pressable>
 
-      <Text style={[styles.sectionTitle, isDark && { color: '#e5e7eb' }]}>Descripción</Text>
-      <Text style={[styles.paragraph, isDark && { color: '#cbd5f5' }]}>{destino.descripcion}</Text>
+      <View style={styles.infoContainer}>
+        <Text style={styles.title}>{destino.nombre}</Text>
+        <Text style={styles.location}>📍 {destino.ubicacion}</Text>
+        <Text style={styles.description}>{destino.descripcion}</Text>
 
-      {destino.gastos && (
-        <>
-          <Text style={[styles.sectionTitle, isDark && { color: '#e5e7eb' }]}>Distribución de gastos</Text>
-          <View style={styles.chipRow}>
-            {destino.gastos.alojamiento != null && (
-              <View style={[styles.chip, isDark && { backgroundColor: '#020617', borderColor: '#1f2937' }]}>
-                <Text style={[styles.chipText, isDark && { color: '#e5e7eb' }]}>Alojamiento: S/ {destino.gastos.alojamiento}</Text>
+        <Text style={styles.sectionTitle}>Planes Disponibles</Text>
+        {destino.tours.map((tour, index) => {
+          const isSelected = tourSeleccionado?.nombre === tour.nombre;
+          return (
+            <Pressable
+              key={index}
+              style={[styles.tourCard, isSelected && styles.tourCardSelected]}
+              onPress={() => setTourSeleccionado(tour)}
+            >
+              <Text style={styles.tourName}>{tour.nombre}</Text>
+              <Text style={styles.tourDesc}>{tour.descripcion}</Text>
+              <View style={styles.tourFooter}>
+                <Text style={styles.tourDuration}>⏱ {tour.duracion || destino.duracion}</Text>
+                <Text style={styles.tourPrice}>S/ {tour.precio}</Text>
               </View>
-            )}
-            {destino.gastos.transporte != null && (
-              <View style={[styles.chip, isDark && { backgroundColor: '#020617', borderColor: '#1f2937' }]}>
-                <Text style={[styles.chipText, isDark && { color: '#e5e7eb' }]}>Transporte: S/ {destino.gastos.transporte}</Text>
-              </View>
-            )}
-            {destino.gastos.alimentacion != null && (
-              <View style={[styles.chip, isDark && { backgroundColor: '#020617', borderColor: '#1f2937' }]}>
-                <Text style={[styles.chipText, isDark && { color: '#e5e7eb' }]}>Alimentación: S/ {destino.gastos.alimentacion}</Text>
-              </View>
-            )}
-            {destino.gastos.entradas != null && (
-              <View style={[styles.chip, isDark && { backgroundColor: '#020617', borderColor: '#1f2937' }]}>
-                <Text style={[styles.chipText, isDark && { color: '#e5e7eb' }]}>Entradas: S/ {destino.gastos.entradas}</Text>
-              </View>
-            )}
-          </View>
-        </>
-      )}
-
-      {/* Bloque de resumen rápido */}
-      <View style={[styles.summaryBox, isDark && { backgroundColor: '#020617', borderColor: '#1f2937' }]}> 
-        <Text style={[styles.summaryTitle, isDark && { color: '#e5e7eb' }]}>Resumen rápido</Text>
-        <Text style={[styles.summaryItem, isDark && { color: '#cbd5f5' }]}>Duración: {destino.duracion}</Text>
-        <Text style={[styles.summaryItem, isDark && { color: '#cbd5f5' }]}>Precio desde: S/ {destino.precio}</Text>
-        <Text style={[styles.summaryItem, isDark && { color: '#cbd5f5' }]}>Presupuesto: {destino.presupuesto}</Text>
+              {isSelected && (
+                <View style={styles.checkIcon}>
+                  <Ionicons name="checkmark-circle" size={24} color="#f97316" />
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
       </View>
 
-      {destino.tours && destino.tours.length > 0 && (
-        <>
-          <Text style={[styles.sectionTitle, isDark && { color: '#e5e7eb' }]}>Planes disponibles</Text>
-
-          {tourSeleccionado && (
-            <View
-              style={[
-                styles.selectedPlanBox,
-                isDark
-                  ? { backgroundColor: '#0b1120', borderColor: '#1d4ed8' }
-                  : { backgroundColor: '#fff7ed', borderColor: '#f97316' },
-              ]}
-            >
-              <Text style={[styles.selectedTitle, isDark && { color: '#e5e7eb' }]}>Plan elegido</Text>
-              <Text style={[styles.selectedName, isDark && { color: '#e5e7eb' }]}>{tourSeleccionado.nombre}</Text>
-              <Text style={[styles.selectedMeta, isDark && { color: '#9ca3af' }]}>
-                {tourSeleccionado.duracion || destino.duracion}
-              </Text>
-              <Text style={[styles.selectedPrice, isDark && { color: '#22c55e' }]}>S/ {tourSeleccionado.precio}</Text>
-            </View>
-          )}
-
-          {destino.tours.map((tour: any, index: number) => {
-            const isSelected = tourSeleccionado?.nombre === tour.nombre;
-            return (
-              <Pressable
-                key={index}
-                style={[
-                  styles.tourCard,
-                  isDark && {
-                    backgroundColor: '#020617',
-                    borderColor: '#1f2937',
-                  },
-                  isSelected && {
-                    borderColor: isDark ? '#3b82f6' : '#f97316',
-                    borderWidth: 2,
-                    backgroundColor: isDark ? '#020617' : '#fff7ed',
-                  },
-                ]}
-                onPress={() => {
-                  if (fromReserva) return; // Si venimos desde una reserva confirmada, no permitir cambiar de tour
-                  setTourSeleccionado(tour);
-                }}
-              >
-                <Text style={[styles.tourTitle, isDark && { color: '#e5e7eb' }]}>{tour.nombre}</Text>
-                <Text style={[styles.paragraph, isDark && { color: '#cbd5f5' }]}>{tour.descripcion}</Text>
-                <Text style={[styles.paragraph, isDark && { color: '#9ca3af' }]}>📅 {tour.duracion || destino.duracion}</Text>
-                <Text style={[styles.tourPrice, isDark && { color: '#22c55e' }]}>Desde S/ {tour.precio}</Text>
-              </Pressable>
-            );
-          })}
-        </>
-      )}
-
-      {!fromReserva && (
+      <View style={styles.footer}>
         <Pressable
           style={[
-            styles.primaryButton,
-            { opacity: tourSeleccionado ? 1 : 0.5 },
+            styles.addButton,
+            (!tourSeleccionado || guardando) && styles.addButtonDisabled,
           ]}
-          onPress={() => {
-            if (!tourSeleccionado) return;
-            if (!user) {
-              router.push('/login');
-              return;
-            }
-            // Calcular duración en días a partir del texto (ej: "3 días / 2 noches")
-            const duracionTexto = tourSeleccionado.duracion || destino.duracion;
-            const matchDias = duracionTexto?.match(/(\d+)\s*d[ií]as?/i);
-            const duracion_dias = matchDias ? parseInt(matchDias[1], 10) : 1;
-
-            const planId = `${destino.id}-${(tourSeleccionado.nombre || 'plan').replace(/\s+/g, '-')}-${Date.now()}`;
-
-            agregarDestino({
-              id: planId,
-              destino_id: destino.id,
-              destino: destino.nombre,
-              tour: tourSeleccionado.nombre,
-              precio: tourSeleccionado.precio ?? destino.precio,
-              duracion: duracionTexto,
-              duracion_dias,
-              gastos: tourSeleccionado.gastos || destino.gastos,
-              ubicacion: destino.ubicacion,
-              imagen: destino.imagen,
-              estado: 'borrador',
-              fecha_inicio: null,
-              fecha_fin: null,
-              resena_completada: false,
-            });
-            router.push('/(tabs)/mis-planes');
-          }}
-          disabled={!tourSeleccionado}
+          onPress={handleAgregarPlan}
+          disabled={!tourSeleccionado || guardando}
         >
-          <Text style={styles.primaryButtonText}>
-            {tourSeleccionado ? 'Agregar a mis planes' : 'Selecciona un plan para continuar'}
-          </Text>
+          {guardando ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.addButtonText}>
+              {tourSeleccionado ? 'Añadir a mis planes' : 'Selecciona un plan'}
+            </Text>
+          )}
         </Pressable>
-      )}
-
-      {fromReserva && (
-        <Pressable
-          style={[styles.primaryButton]}
-          onPress={() => {
-            router.push(`/reserva/${fromReserva}`);
-          }}
-        >
-          <Text style={styles.primaryButtonText}>Volver a mi reserva</Text>
-        </Pressable>
-      )}
-
-      <Pressable style={styles.secondaryButton} onPress={() => router.back()}>
-        <Text style={styles.secondaryButtonText}>Volver</Text>
-      </Pressable>
-      </ScrollView>
-
-      <Modal
-        visible={showMap}
-        animationType="slide"
-        onRequestClose={() => setShowMap(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Mapa de {destino.nombre}</Text>
-            <Pressable
-              style={styles.modalCloseButton}
-              onPress={() => setShowMap(false)}
-            >
-              <Text style={styles.modalCloseButtonText}>Cerrar</Text>
-            </Pressable>
-          </View>
-          <WebView
-            source={{ uri: mapUrl }}
-            style={styles.modalMap}
-          />
-        </View>
-      </Modal>
-    </>
+      </View>
+    </ScrollView>
   );
 }

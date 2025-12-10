@@ -22,6 +22,7 @@ export type Destino = {
     nombre: string;
     descripcion: string;
     precio: number;
+    duracion?: string; // <--- AGREGADO AQUÍ (Opcional)
     incluye: string[];
     gastos: {
       alojamiento: number;
