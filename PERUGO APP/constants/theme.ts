@@ -1,51 +1,71 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Colores y Tipografía de PeruGo.
+ * Se define la paleta rojo/cian y la fuente Poppins.
  */
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// Colores de identidad (Rojo PeruGo)
+const primaryRed = 'rgb(255, 0, 0)';
+const primaryRedDark = '#ef4444'; // Un rojo más suave para modo oscuro
+const accentCyan = '#06b6d4';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: '#0f172a',        // Slate 900
+    background: '#f8fafc',  // Slate 50
+    tint: primaryRed,       // Color de selección (Tabs, botones activos)
+    icon: '#64748b',        // Slate 500
+    tabIconDefault: '#94a3b8',
+    tabIconSelected: primaryRed,
+    
+    // Variables semánticas extra para nuestros componentes
+    cardBackground: '#ffffff',
+    border: '#e2e8f0',
+    primary: primaryRed,
+    secondary: '#f1f5f9',
+    danger: '#ef4444',
+    success: '#22c55e',
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: '#f8fafc',        // Slate 50
+    background: '#020617',  // Slate 950
+    tint: primaryRedDark,
+    icon: '#9ca3af',
+    tabIconDefault: '#475569',
+    tabIconSelected: primaryRedDark,
+    
+    // Variables semánticas extra
+    cardBackground: '#1e293b', // Slate 800
+    border: '#334155',
+    primary: primaryRedDark,
+    secondary: '#334155',
+    danger: '#f87171',
+    success: '#4ade80',
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
+    sans: 'Poppins', 
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
+  android: {
+    sans: 'Poppins', // En Android necesita coincidir con el nombre del archivo (Poppins-Regular) o el nombre cargado
+    serif: 'serif',
+    rounded: 'normal',
+    mono: 'monospace',
+  },
   default: {
-    sans: 'normal',
+    sans: 'Poppins',
     serif: 'serif',
     rounded: 'normal',
     mono: 'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    sans: "Poppins, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
