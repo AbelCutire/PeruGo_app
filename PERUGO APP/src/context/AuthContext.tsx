@@ -1,9 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Definimos la URL de tu backend real
-const BASE_URL = 'https://perugo-backend-production.up.railway.app';
-
 export type User = {
   id: string;
   email: string;
@@ -13,7 +10,7 @@ export type User = {
 export type AuthContextValue = {
   user: User | null;
   token: string | null;
-  isLoading: boolean; // Para saber si estamos verificando sesión
+  isLoading: boolean; // Para saber si estamos cargando la sesión guardada
   login: (email: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -21,6 +18,8 @@ export type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+const BASE_URL = 'https://perugo-backend-production.up.railway.app';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -33,13 +32,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const storedToken = await AsyncStorage.getItem('token');
         const storedUser = await AsyncStorage.getItem('user');
-
         if (storedToken && storedUser) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
         }
-      } catch (e) {
-        console.error('Error cargando sesión:', e);
+      } catch (error) {
+        console.log('No hay sesión guardada', error);
       } finally {
         setIsLoading(false);
       }
@@ -47,14 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadSession();
   }, []);
 
-  // 2. Función Login conectada al Backend
   const login = async (email: string, password: string) => {
     const response = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ email, password }),
     });
 
@@ -67,20 +61,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.token && data.user) {
       setToken(data.token);
       setUser(data.user);
-      // Guardar en el teléfono
+      // Guardar en el dispositivo
       await AsyncStorage.setItem('token', data.token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
     }
   };
 
-  // 3. Función Register conectada al Backend
   const register = async (username: string, email: string, password: string) => {
     const response = await fetch(`${BASE_URL}/auth/register`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ email, password, username }),
     });
 
@@ -89,12 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!response.ok) {
       throw new Error(data.error || data.message || 'Error al registrar usuario');
     }
-
-    // Nota: Si tu backend hace login automático tras registro, guarda el token aquí.
-    // Si no, el usuario deberá hacer login después. Asumimos el flujo actual.
+    // El registro en tu backend no devuelve token automáticamente, el usuario debe loguearse.
   };
 
-  // 4. Logout (Borrar todo del teléfono)
   const logout = async () => {
     setToken(null);
     setUser(null);
@@ -102,7 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.removeItem('user');
   };
 
-  // 5. Actualizar Perfil
   const updateUsername = async (username: string) => {
     if (!token) throw new Error('No hay sesión activa');
 
@@ -110,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'application/json',
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ username }),
@@ -118,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'No se pudo actualizar');
+      throw new Error(data.error || 'No se pudo actualizar el nombre');
     }
 
     if (data.user) {

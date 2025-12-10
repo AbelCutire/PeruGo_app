@@ -1,29 +1,31 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { destinos } from '../data/destinos'; 
 
-// URL del backend
 const BASE_URL = 'https://perugo-backend-production.up.railway.app';
 
 export type Plan = {
   id: string;
   destino_id: string;
-  destino?: string; // El backend a veces manda solo IDs, asegúrate de mapear si es necesario
+  destino: string; 
   tour: string;
   precio: number;
-  duracion?: string;
+  duracion: string;
+  duracion_dias: number;
+  gastos?: any;
+  ubicacion?: string;
+  imagen?: string;
   estado: 'borrador' | 'pendiente' | 'confirmado' | 'cancelado' | 'completado';
   fecha_inicio?: string | null;
   fecha_fin?: string | null;
-  imagen?: string; // Si el backend no manda imagen, la manejaremos en el frontend según destino_id
   resena_completada?: boolean;
-  gastos?: any;
 };
 
 export type PlanesContextValue = {
   planes: Plan[];
   loading: boolean;
   recargarPlanes: () => Promise<void>;
-  agregarDestino: (planData: Partial<Plan>) => Promise<void>;
+  agregarDestino: (plan: Partial<Plan>) => Promise<void>;
   actualizarPlan: (id: string, cambios: Partial<Plan>) => Promise<void>;
   eliminarPlan: (id: string) => Promise<void>;
 };
@@ -31,11 +33,10 @@ export type PlanesContextValue = {
 const PlanesContext = createContext<PlanesContextValue | undefined>(undefined);
 
 export function PlanesProvider({ children }: { children: ReactNode }) {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 1. Función para obtener planes del servidor (GET)
   const fetchPlanes = useCallback(async () => {
     if (!token) {
       setPlanes([]);
@@ -50,9 +51,29 @@ export function PlanesProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        // Mapeamos los datos si es necesario (ej. asegurar que tengan imagen local o remota)
-        // Nota: Si el backend no devuelve la imagen, deberás mapearla aquí usando `destinos.ts`
-        setPlanes(data);
+        
+        // Mapeamos respuesta del backend con datos locales (imágenes)
+        const planesMapeados = data.map((p: any) => {
+          const infoDestino = destinos.find((d) => d.id === p.destino_id);
+          return {
+            id: p.id,
+            destino_id: p.destino_id,
+            destino: infoDestino?.nombre || p.destino_id,
+            tour: p.tour,
+            precio: p.precio,
+            duracion: p.duracion || infoDestino?.duracion || 'Consultar',
+            duracion_dias: 1,
+            estado: p.estado,
+            fecha_inicio: p.fecha_inicio,
+            fecha_fin: p.fecha_fin,
+            resena_completada: p.resena_completada,
+            gastos: p.gastos,
+            imagen: infoDestino?.imagen,
+            ubicacion: infoDestino?.ubicacion
+          };
+        });
+
+        setPlanes(planesMapeados);
       } else {
         console.error('Error al obtener planes');
       }
@@ -63,23 +84,20 @@ export function PlanesProvider({ children }: { children: ReactNode }) {
     }
   }, [token]);
 
-  // Cargar planes cuando cambia el usuario o el token
   useEffect(() => {
     fetchPlanes();
   }, [fetchPlanes]);
 
-  // 2. Agregar Plan (POST)
-  const agregarDestino = async (planData: Partial<Plan>) => {
+  const agregarDestino = async (plan: Partial<Plan>) => {
     if (!token) return;
 
     try {
-      // Preparamos el body según lo que espera tu backend Python
       const body = {
-        destino_id: planData.destino_id,
-        tour: planData.tour,
-        precio: planData.precio,
-        gastos: planData.gastos,
-        estado: 'borrador' // Default
+        destino_id: plan.destino_id,
+        tour: plan.tour,
+        precio: plan.precio,
+        gastos: plan.gastos,
+        estado: 'borrador'
       };
 
       const response = await fetch(`${BASE_URL}/api/planes`, {
@@ -94,8 +112,7 @@ export function PlanesProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         throw new Error('Error al guardar el plan');
       }
-
-      // Recargamos la lista completa para tener los datos frescos (incluido el ID generado por BD)
+      
       await fetchPlanes();
     } catch (error) {
       console.error(error);
@@ -103,11 +120,10 @@ export function PlanesProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // 3. Actualizar Plan (PUT)
   const actualizarPlan = async (id: string, cambios: Partial<Plan>) => {
     if (!token) return;
 
-    // Actualización optimista (UI primero)
+    // Actualización optimista
     setPlanes((prev) => prev.map((p) => (p.id === id ? { ...p, ...cambios } : p)));
 
     try {
@@ -120,22 +136,16 @@ export function PlanesProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(cambios),
       });
 
-      if (!response.ok) {
-        throw new Error('Error al actualizar plan');
-      }
-      // Opcional: fetchPlanes() si quieres estar 100% seguro de la sincronización
+      if (!response.ok) throw new Error('Error al actualizar plan');
     } catch (error) {
       console.error(error);
-      // Revertir cambios si falla (opcional)
-      await fetchPlanes();
+      await fetchPlanes(); // Revertir en caso de error
     }
   };
 
-  // 4. Eliminar Plan (DELETE)
   const eliminarPlan = async (id: string) => {
     if (!token) return;
 
-    // Actualización optimista
     setPlanes((prev) => prev.filter((p) => p.id !== id));
 
     try {
@@ -144,12 +154,10 @@ export function PlanesProvider({ children }: { children: ReactNode }) {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!response.ok) {
-        throw new Error('Error al eliminar');
-      }
+      if (!response.ok) throw new Error('Error al eliminar plan');
     } catch (error) {
       console.error(error);
-      await fetchPlanes(); // Revertir
+      await fetchPlanes();
     }
   };
 
