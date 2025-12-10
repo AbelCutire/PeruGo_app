@@ -108,9 +108,6 @@ export default function ReservaScreen() {
   const [estado, setEstado] = useState<typeof ESTADOS[number]>(plan?.estado || 'borrador');
   const [mostrarFechaModal, setMostrarFechaModal] = useState(false);
   const [mostrarPagoModal, setMostrarPagoModal] = useState(false);
-  const [mostrarResenaModal, setMostrarResenaModal] = useState(false);
-  const [comentario, setComentario] = useState('');
-  const [estrellas, setEstrellas] = useState(5);
   const [procesandoPago, setProcesandoPago] = useState(false);
   const [fechaSeleccionada, setFechaSeleccionada] = useState('');
 
@@ -243,19 +240,16 @@ export default function ReservaScreen() {
       );
     }
 
-    // completado
+    // completado: mantener acceso a "Ver destino" sin paso de reseña
     return (
       <Pressable
-        style={[styles.actionButton, styles.primaryButton]}
+        style={[styles.actionButton, styles.secondaryButton]}
         onPress={() => {
-          if (!plan.resena_completada) {
-            setMostrarResenaModal(true);
-          }
+          const encodedTour = encodeURIComponent(plan.tour || '');
+          router.push(`/destino/${plan.destino_id}?tour=${encodedTour}&fromReserva=${plan.id}`);
         }}
       >
-        <Text style={styles.primaryButtonText}>
-          {plan.resena_completada ? 'Reseña completada' : 'Dejar reseña'}
-        </Text>
+        <Text style={[styles.secondaryButtonText, { color: headerText }]}>Ver destino</Text>
       </Pressable>
     );
   };
@@ -401,11 +395,11 @@ export default function ReservaScreen() {
         </View>
       </Modal>
 
-      {/* Modal de pago (pendiente -> confirmado), simulando la web */}
+      {/* Modal de pago (pendiente -> confirmado) */}
       <Modal visible={mostrarPagoModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-            <Text style={[styles.modalTitle, { color: headerText }]}>Simular pago</Text>
+            <Text style={[styles.modalTitle, { color: headerText }]}>Pagar</Text>
             <Text style={[styles.modalText, { color: labelColor }]}>
               Este paso procesará el pago de tu plan y lo marcará como confirmado, igual que en la web.
             </Text>
@@ -499,64 +493,6 @@ export default function ReservaScreen() {
                 <Text style={styles.primaryButtonText}>
                   {procesandoPago ? 'Procesando...' : 'Confirmar pago'}
                 </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal de reseña (completado) */}
-      <Modal visible={mostrarResenaModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-            <Text style={[styles.modalTitle, { color: headerText }]}>Dejar reseña</Text>
-            <Text style={[styles.modalText, { color: labelColor }]}>
-              Cuéntanos cómo te fue en {plan.destino}.
-            </Text>
-
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Pressable key={star} onPress={() => setEstrellas(star)}>
-                  <Text
-                    style={{
-                      fontSize: 26,
-                      marginHorizontal: 4,
-                      color: star <= estrellas ? '#fbbf24' : '#1f2937',
-                    }}
-                  >
-                    ★
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <TextInput
-              value={comentario}
-              onChangeText={setComentario}
-              multiline
-              placeholder="Escribe tu reseña..."
-              placeholderTextColor={labelColor}
-              style={[
-                styles.reviewInput,
-                { color: headerText, borderColor: cardBorder },
-              ]}
-            />
-
-            <View style={styles.modalButtonsRow}>
-              <Pressable
-                style={[styles.actionButton, styles.secondaryButton]}
-                onPress={() => setMostrarResenaModal(false)}
-              >
-                <Text style={[styles.secondaryButtonText, { color: headerText }]}>Cerrar</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.actionButton, styles.primaryButton]}
-                onPress={() => {
-                  actualizarPlan(plan.id, { resena_completada: true });
-                  setMostrarResenaModal(false);
-                }}
-              >
-                <Text style={styles.primaryButtonText}>Enviar reseña</Text>
               </Pressable>
             </View>
           </View>
